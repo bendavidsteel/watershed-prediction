@@ -1,37 +1,31 @@
+import os
 import pandas as pd
 
 file_names = {
-    "aggregate_early" : "runoff_aggregrateh_early.asp",
-    "aggregate_late" : "runoff_aggregateh_later.asp",
-    "event_early" : "runoff_eventh_early.asp",
-    "event_late" : "runoff_eventh_later.asp"
+    "daily_gage_precip" : "dailyGagePrecip1956-2019.csv",
+    "daily_watershed_precip" : "dailyWatershedPrecip1956-2019.csv",
+    "daily_streamflow" : "HBEF_DailyStreamflow_1956-2017_longform.csv",
+    "daily_snowwater" : "HBEF_snowwater1956-2018.csv"
 }
 
-dataset_path = "../dataset/"
+this_path = os.path.dirname(os.path.abspath(__file__))
+dataset_path = os.path.join(this_path, "dataset")
 
-def get_flume_areas():
-    # all files have same areas values
-    with open(dataset_path + file_names["aggregate_early"], "rt") as f:
-        for line_num in range(len(f)):
-            if f[line_num] == "#Flume areas in acres:":
-                area_line_num = line_num + 1
-                break
-
-        area_line = f[area_line_num]
-
-    # strip superfluous chars
-    area_line = area_line.replace('#', '')
-
-    area_strings = area_line.split(',')
-    areas = {}
-    for area_string in area_strings:
-        flume, area_str = area_string.split(':')
-        areas[flume] = float(area)
-
-    return areas
-
-def get_aggregate_data():
+def get_raw_data():
     
+    gage_precip = pd.read_csv(os.path.join(dataset_path, file_names["daily_gage_precip"]), names=["Date", "RainGage", "Precipitation"], header=0)
+    # reshape so that raingage is also column
+    gage_precip = pd.pivot_table(gage_precip, values='Precipitation', 
+                       index='Date',
+                       columns='RainGage').reset_index('Date')
 
-def get_dataframe_from_file(file_path):
-    return pd.read_csv(file_path, header=9)
+    snowwater = pd.read_csv(os.path.join(dataset_path, file_names["daily_snowwater"]), names=["Winter","Date","STA1","STA2","STA3","STA4","STA5", \
+                                                                                              "STA6","STA7","STA8","STA9","STA10","STA11","STA12", \
+                                                                                              "STA13","STA14","STA15","STA16","STA17","STA19","STA20","STA21","STAHQ"], header=0)
+
+    streamflow = pd.read_csv(os.path.join(dataset_path, file_names["daily_streamflow"]), names=["Date", "Watershed", "Streamflow"], header=0)
+    streamflow = pd.pivot_table(streamflow, values='Streamflow', 
+                       index='Date',
+                       columns='Watershed').reset_index('Date')
+
+    return gage_precip, snowwater, streamflow
