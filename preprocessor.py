@@ -1,5 +1,7 @@
 # uses functions from https://www.tensorflow.org/tutorials/structured_data/time_series
 
+import math
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -64,32 +66,22 @@ def multivariate_data(dataset, target, start_index, end_index, history_size,
     return np.array(data), np.array(labels)
 
 
-def replace_nan_with_weighted_mean(dataset, weights):
-    for index, row in dataset.iterrows():
-        
-def get_distance(gage_a, gage_b, weights):
-    cell = weights.query('InputID=={0}&TargetID=={1}'.format(gage_a,gage_b))['Distance']
-    return cell.values[0]
-
-def replace_nan_with_weighted_mean(dataset, weights):
+def replace_nan_with_weighted_mean(dataset, weights, get_weight, nan_function=lambda x: math.isnan(x), column_name_converter=lambda x: x[2:]):
     for index, row in dataset.iterrows():
         present_values = {}
         for col, value in row.iteritems():
-            if not math.isnan(value):
-                present_values[col[2:]] = value
+            if not nan_function(value):
+                present_values[column_name_converter(col)] = value
                 
         for col, value in row.iteritems():
-            if math.isnan(value):
+            if nan_function(value):
                 accu = 0
-                total_dist = 0
+                total_weights = 0
                 for key, val in present_values.items():
-                    try:
-                        dist = get_distance(key, col[2:], weights)
-                    except IndexError:
-                        dist = 1
-                    accu += val * dist
-                    total_dist += dist
-                new_val = accu / total_dist
-                dataset.at[index,col] = new_val   
+                    weight = get_weight(key, column_name_converter(col), weights)
+                    accu += val * weight
+                    total_weights += weight
+                new_val = accu / total_weights
+                dataset.at[index,col] = new_val
     
     return dataset
